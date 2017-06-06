@@ -17,7 +17,6 @@ package token
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/docker/distribution/registry/auth/token"
@@ -180,7 +179,11 @@ func (e *unauthorizedError) Error() string {
 
 func (g generalCreator) Create(r *http.Request) (*tokenJSON, error) {
 	var err error
-	scopes := parseScopes(r.URL)
+	var scopes []string
+	scopeParm := r.URL.Query()["scope"]
+	if len(scopeParm) > 0 {
+		scopes = strings.Split(r.URL.Query()["scope"][0], " ")
+	}
 	log.Debugf("scopes: %v", scopes)
 
 	ctx, err := filter.GetSecurityContext(r)
@@ -200,13 +203,4 @@ func (g generalCreator) Create(r *http.Request) (*tokenJSON, error) {
 		return nil, err
 	}
 	return makeToken(ctx.GetUsername(), g.service, access)
-}
-
-func parseScopes(u *url.URL) []string {
-	var sector string
-	var result []string
-	for _, sector = range u.Query()["scope"] {
-		result = append(result, strings.Split(sector, " ")...)
-	}
-	return result
 }

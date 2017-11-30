@@ -1,0 +1,11 @@
+
+ <div>
+  <div class="select" style="display: inline-block; width: 186px;">
+   <select id="{{selectLists[selectIndex].id}}" name="{{selectLists[selectIndex].name}}"  (change)="selectChange($event)" >
+    <option *ngFor="let filter of selectLists[selectIndex].options; let i = index" [selected]="i == 0 ">{{filter}}</option>
+   </select>
+  </div>
+  <input type="text"  size="20" #repoName (blur)="filterInput( repoName.value)">
+  <clr-icon shape="times-circle" class="is-solid"  (click)="deleteFilterRepo(selectLists[selectIndex].id)"></clr-icon>
+ </div>
+ <br>

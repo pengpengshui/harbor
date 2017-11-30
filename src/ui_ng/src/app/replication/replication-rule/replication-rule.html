@@ -1,0 +1,133 @@
+<div>
+ <a class="cursor" (click)="backReplication()">< {{'SIDE_NAV.SYSTEM_MGMT.REPLICATION' | translate}}</a>
+ <h1 class="sub-header-title">New Replication Rule</h1>
+<form #ruleForm="ngForm">
+ <section class="form-block">
+
+  <div class="form-group">
+   <label for="rule_name" class="col-md-4 form-group-label-override">{{'REPLICATION.NAME' | translate}}<span style="color: red">*</span></label>
+   <label class="col-md-8"  aria-haspopup="true" role="tooltip" [class.invalid]="name.errors && (name.dirty || name.touched)" class="tooltip tooltip-validation tooltip-sm tooltip-bottom-left">
+    <input type="text" id="rule_name" name="name" size="20" [(ngModel)]="newRule.name" #name required >
+    <span class="tooltip-content" *ngIf="name.errors && name.errors.required && (name.dirty || name.touched)">
+              {{'REPLICATION.NAME_IS_REQUIRED' | translate}}
+            </span>
+   </label>
+  </div>
+  <!--Description-->
+  <div class="form-group">
+   <label for="rule_description" class="col-md-4 form-group-label-override">{{'REPLICATION.DESCRIPTION' | translate}}</label>
+   <input type="text" class="col-md-8" id="rule_description" [(ngModel)]="newRule.description"  name="description" size="20" #description>
+  </div>
+  <!--Projects-->
+  <h4>Source Projects</h4>
+  <div class="form-group">
+   <label for="rule_projects" class="col-md-4 form-group-label-override">{{'PROJECT.PROJECTS' | translate}}</label>
+   <div class="select">
+    <select id="rule_projects" #projects (change)="selectEndpoint($event, projects)">
+     <option *ngFor="let project of projectList.slice(0,10)" id="{{project.project_id}}">{{project.name}}</option>
+     <option class="optionMore" value="more" *ngIf="projectList?.length>10"> <button class="btn btn-primary"> +more</button></option>
+    </select>
+   </div>
+   <label ><span  class="label" *ngFor="let selectedName of selectedNames">{{selectedName}}</span></label>
+  </div>
+<!--images-->
+  <h4>Source Images</h4>
+  <div class="form-group">
+   <label class="col-md-4 form-group-label-override">Filter</label>
+    <ng-container *ngIf="filterListData.length"  class="col-md-6" >
+     <repo-filter  *ngFor="let filters of filterListData;  let i=index; trackBy: trackByFn" [hidden]="!filters.state" [selectLists]="filterListData" [selectIndex]="i"
+                   (deleteFilter)="deleteFilter($event)" (newFilters)="getNewFilter($event)"></repo-filter>
+    </ng-container>
+    <clr-icon shape="plus-circle" class="is-solid" [hidden]="isFilterHide" (click)="addNewFilter()" style="margin-top: 10px; margin-left: 10px;"></clr-icon>
+  </div>
+  <!--Targets-->
+  <h4>Targets</h4>
+  <div class="form-group">
+   <label class="col-md-4 form-group-label-override">Endpoint</label>
+   <div  class="">
+     <label>URL </label><span style="color: red">*</span>
+     <div class="select sourceSelect endpointSelect">
+      <select name="endpoint_url">
+       <option *ngFor="let filter of urlLists">{{filter.name}}: {{filter.endpoint}}</option>
+      </select>
+   </div>
+   </div>
+  </div>
+
+  <!--schedule-->
+  <h4>Schedule</h4>
+  <div class="form-group">
+   <label class="col-md-4 form-group-label-override">Replication schedule</label>
+   <div  class="">
+    <div>
+     <!--on push-->
+     <div class="select sourceSelect">
+      <select name="scheduleType" [(ngModel)]="newRule.scheduleType"
+              (change)="selectSchedule($event)">
+       <option *ngFor="let scheduleName of scheduleNames" value="{{scheduleName}}">{{scheduleName}}</option>
+      </select>
+    </div>
+    <!--weekly-->
+    <span [hidden]="weeklySchedule">on &nbsp;&nbsp;</span>
+    <div  [hidden]="weeklySchedule" class="select sourceSelect">
+     <select name="scheduleDay" [(ngModel)]="newRule.scheduleDay" name="scheduleDay">
+      <option *ngFor="let filter of weekly" [value]="filter">{{filter}}</option>
+     </select>
+    </div>
+    <!--daily-->
+    <span [hidden]="dailySchedule">at &nbsp;&nbsp;</span>
+    <input [hidden]="dailySchedule" type="time" name="scheduleTime" [(ngModel)]="newRule.scheduleTime" required value="08:00" />
+     <!--<div *ngIf="dailySchedule" class="select sourceSelect">
+      <select name="repository_select">
+       <option *ngFor="let filter of imageFilters" [value]="filter">{{filter}}</option>
+      </select>
+     </div>-->
+    </div>
+
+    <div>
+     <clr-checkbox [clrChecked]="true" [(ngModel)]="newRule.replicateUsers" name="replicateUsers">
+      Replicate users and roles
+     </clr-checkbox>
+    </div>
+    <div>
+     <clr-checkbox [clrChecked]="true" [(ngModel)]="newRule.enable" name="enable">
+      Enable
+     </clr-checkbox>
+    </div>
+    <div>
+     <clr-checkbox [clrChecked]="true" [(ngModel)]="newRule.deleteRemote" name="deleteRemote">
+      Delete remote images when locally deleted
+     </clr-checkbox>
+    </div>
+    <div >
+
+    </div>
+   </div>
+
+  </div>
+
+<!--  <div class="form-group">
+   <label for="" class="col-md-4 form-group-label-override">Endpoint</label>
+  </div>-->
+
+
+
+
+
+
+
+
+
+
+
+
+  <div class="offset-md-4">
+   <button type="button" class="btn btn-outline" (click)="onCancel()">{{ 'BUTTON.CANCEL' | translate }}</button>
+   <button type="submit" class="btn btn-primary" (click)="onSubmit()">{{ 'BUTTON.OK' | translate }}</button>
+  </div>
+<!--  <button class="btn btn-primary" type="submit"
+          [disabled]="ruleForm.form.invalid">Add</button>-->
+ </section>
+</form>
+ <select-project-name [projectList]="projectList" (checkedNameList)="CheckedProjectNameList($event)"></select-project-name>
+</div>

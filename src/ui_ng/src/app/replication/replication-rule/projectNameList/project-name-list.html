@@ -1,0 +1,20 @@
+<clr-modal [(clrModalOpen)]="ismodelOpen">
+    <!--[clrModalStaticBackdrop]="staticBackdrop" [clrModalClosable]="closable"-->
+    <h3 class="modal-title">{{'PROJECT.NEW_PROJECT' | translate}}</h3>
+    <inline-alert class="modal-title" ></inline-alert>
+    <div class="modal-body" style="height: 16.8em; overflow-y: auto;">
+        <form #projectForm="ngForm">
+            <section class="form-block">
+                <div class="form-group" style="padding-left: 30px;">
+                    <clr-checkbox *ngFor="let project of projectNameList" [(clrChecked)]="project[2]" style="flex:1 1 40%">
+                        {{project[0]}}
+                    </clr-checkbox>
+                </div>
+            </section>
+        </form>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline" (click)="closeModel()">{{'BUTTON.CANCEL' | translate}}</button>
+        <button type="button" class="btn btn-primary" [disabled]="!isValid" (click)="submitCheckedName()" >{{'BUTTON.OK' | translate}}</button>
+    </div>
+</clr-modal>

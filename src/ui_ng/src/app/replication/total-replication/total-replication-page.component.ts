@@ -26,7 +26,11 @@ export class TotalReplicationPageComponent {
               private activeRoute: ActivatedRoute){}
   customRedirect(rule: ReplicationRule): void {
     if (rule) {
-      this.router.navigate(['../../projects', rule.project_id, "replications"],  { relativeTo: this.activeRoute });
+      this.router.navigate(['../projects', rule.project_id, "replications"],  { relativeTo: this.activeRoute });
     }
+  }
+
+  openModal(): void {
+      this.router.navigate(['newRule'],  { relativeTo: this.activeRoute });
   }
 }

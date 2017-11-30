@@ -20,6 +20,9 @@ import { TotalReplicationPageComponent } from './total-replication/total-replica
 import { DestinationPageComponent } from './destination/destination-page.component';
 
 import { SharedModule } from '../shared/shared.module';
+import {ReplicationRuleComponent} from "./replication-rule/replication-rule.component";
+import {FilterComponent} from "./replication-rule/filter/filter.component";
+import {ProjectNameListComponent} from "./replication-rule/projectNameList/project-name-list.component";
 
 @NgModule({
   imports: [
@@ -30,12 +33,18 @@ import { SharedModule } from '../shared/shared.module';
     ReplicationPageComponent,
     ReplicationManagementComponent,
     TotalReplicationPageComponent,
-    DestinationPageComponent
+    DestinationPageComponent,
+    ReplicationRuleComponent,
+    FilterComponent,
+    ProjectNameListComponent
   ],
   exports: [
     ReplicationPageComponent,
     DestinationPageComponent,
-    TotalReplicationPageComponent
+    TotalReplicationPageComponent,
+    ReplicationRuleComponent,
+    FilterComponent,
+    ProjectNameListComponent
   ]
 })
 export class ReplicationModule { }

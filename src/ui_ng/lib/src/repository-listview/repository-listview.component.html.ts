@@ -36,6 +36,6 @@ export const REPOSITORY_LISTVIEW_TEMPLATE = `
       </clr-datagrid>
     </div>
   </div>
-  <confirmation-dialog #confirmationDialog [batchInfors]="batchDelectionInfos" (confirmAction)="confirmDeletion($event)"></confirmation-dialog>  
+  <confirmation-dialog #confirmationDialog (confirmAction)="confirmDeletion($event)"></confirmation-dialog>  
 </div>
 `;

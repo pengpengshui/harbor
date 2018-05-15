@@ -15,6 +15,8 @@ import { ConfirmationAcknowledgement } from '../confirmation-dialog/confirmation
 import { Tag, CardItemEvent } from '../service/interface';
 import {BatchInfo, BathInfoChanges} from "../confirmation-dialog/confirmation-batch-message";
 import { GridViewComponent } from '../gridview/grid-view.component';
+import {OperationService} from "../operation/operation.service";
+import {OperateInfo, OperationState, operateChanges} from "../operation/operate";
 
 
 @Component({
@@ -46,7 +48,6 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
   cardHover = false;
   listHover = false;
 
-  batchDelectionInfos: BatchInfo[] = [];
   pullCountComparator: Comparator<RepositoryItem> = new CustomComparator<RepositoryItem>('pull_count', 'number');
   tagsCountComparator: Comparator<RepositoryItem> = new CustomComparator<RepositoryItem>('tags_count', 'number');
 
@@ -68,6 +69,7 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
     private repositoryService: RepositoryService,
     private systemInfoService: SystemInfoService,
     private tagService: TagService,
+    private operationService: OperationService,
     private ref: ChangeDetectorRef,
     private router: Router) { }
 
@@ -119,14 +121,14 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
         message.source === ConfirmationTargets.REPOSITORY &&
         message.state === ConfirmationState.CONFIRMED) {
 
-      let promiseLists: any[] = [];
-      let repoNames: string[] = message.data.split(',');
+      let repoLists = message.data;
+      if (repoLists && repoLists.length) {
+        let promiseLists: any[] = [];
+        repoLists.forEach(repo => {
+          promiseLists.push(this.delOperate(repo));
+        });
 
-      repoNames.forEach(repoName => {
-        promiseLists.push(this.delOperate(repoName));
-      });
-
-      Promise.all(promiseLists).then((item) => {
+        Promise.all(promiseLists).then((item) => {
         this.selectedRow = [];
         this.refresh();
         let st: State = this.getStateAfterDeletion();
@@ -136,41 +138,49 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
           this.clrLoad(st);
         }
       });
+      }
     }
   }
 
-  delOperate(repoName:  string) {
-    let findedList = this.batchDelectionInfos.find(data => data.name === repoName);
-    if (this.signedCon[repoName].length !== 0) {
+  delOperate(repo: RepositoryItem) {
+    // init operation info
+    let operMessage = new OperateInfo();
+    operMessage.name = 'OPERATION.DELETE_REPO';
+    operMessage.data.id = repo.id;
+    operMessage.state = OperationState.progressing;
+    operMessage.data.name =repo.name ;
+    this.operationService.publishInfo(operMessage);
+
+    if (this.signedCon[repo.name].length !== 0) {
       Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
           this.translateService.get('REPOSITORY.DELETION_TITLE_REPO_SIGNED')).subscribe(res => {
-        findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+        operateChanges(operMessage, OperationState.failure, res[1]);
       });
     } else {
       return toPromise<number>(this.repositoryService
-          .deleteRepository(repoName))
+          .deleteRepository(repo.name))
           .then(
               response => {
                 this.translateService.get('BATCH.DELETED_SUCCESS').subscribe(res => {
-                  findedList = BathInfoChanges(findedList, res);
+                  operateChanges(operMessage, OperationState.success);
                 });
               }).catch(error => {
             if (error.status === "412") {
               Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
                   this.translateService.get('REPOSITORY.TAGS_SIGNED')).subscribe(res => {
-                findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+                operateChanges(operMessage, OperationState.failure, res[1]);
               });
               return;
             }
             if (error.status === 503) {
               Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
                   this.translateService.get('REPOSITORY.TAGS_NO_DELETE')).subscribe(res => {
-                findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+                operateChanges(operMessage, OperationState.failure, res[1]);
               });
               return;
             }
             this.translateService.get('BATCH.DELETED_FAILURE').subscribe(res => {
-              findedList = BathInfoChanges(findedList, res, false, true);
+              operateChanges(operMessage, OperationState.failure, res);
             });
           });
     }
@@ -196,14 +206,10 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
   deleteRepos(repoLists: RepositoryItem[]) {
     if (repoLists && repoLists.length) {
       let repoNames: string[] = [];
-      this.batchDelectionInfos = [];
       let repArr: any[] = [];
 
       repoLists.forEach(repo => {
         repoNames.push(repo.name);
-        let initBatchMessage = new BatchInfo();
-        initBatchMessage.name = repo.name;
-        this.batchDelectionInfos.push(initBatchMessage);
 
         if (!this.signedCon[repo.name]) {
           repArr.push(this.getTagInfo(repo.name));
@@ -211,7 +217,7 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
       });
 
       Promise.all(repArr).then(() => {
-          this.confirmationDialogSet('REPOSITORY.DELETION_TITLE_REPO',  '', repoNames.join(','), 'REPOSITORY.DELETION_SUMMARY_REPO', ConfirmationButtons.DELETE_CANCEL);
+          this.confirmationDialogSet('REPOSITORY.DELETION_TITLE_REPO',  '', repoNames.join(','), repoLists, 'REPOSITORY.DELETION_SUMMARY_REPO', ConfirmationButtons.DELETE_CANCEL);
       });
     }
   }
@@ -230,17 +236,7 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
             .catch(error => this.errorHandler.error(error));
   }
 
-  signedDataSet(repoName: string): void {
-    let signature = '';
-    if (this.signedCon[repoName].length === 0) {
-      this.confirmationDialogSet('REPOSITORY.DELETION_TITLE_REPO', signature, repoName, 'REPOSITORY.DELETION_SUMMARY_REPO', ConfirmationButtons.DELETE_CANCEL);
-      return;
-    }
-    signature = this.signedCon[repoName].join(',');
-    this.confirmationDialogSet('REPOSITORY.DELETION_TITLE_REPO_SIGNED', signature, repoName, 'REPOSITORY.DELETION_SUMMARY_REPO_SIGNED', ConfirmationButtons.CLOSE);
-  }
-
-  confirmationDialogSet(summaryTitle: string, signature: string, repoName: string, summaryKey: string,  button: ConfirmationButtons): void {
+  confirmationDialogSet(summaryTitle: string, signature: string, repoName: string, repoLists: RepositoryItem[],  summaryKey: string,  button: ConfirmationButtons): void {
     this.translateService.get(summaryKey,
         {
           repoName: repoName,
@@ -252,7 +248,7 @@ export class RepositoryGridviewComponent implements OnChanges, OnInit {
               summaryTitle,
               summaryKey,
               repoName,
-              repoName,
+              repoLists,
               ConfirmationTargets.REPOSITORY,
               button);
           this.confirmationDialog.open(message);

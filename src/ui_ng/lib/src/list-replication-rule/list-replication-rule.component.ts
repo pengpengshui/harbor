@@ -43,8 +43,9 @@ import { State, Comparator } from 'clarity-angular';
 
 import { LIST_REPLICATION_RULE_TEMPLATE } from './list-replication-rule.component.html';
 import { LIST_REPLICATION_RULE_CSS } from './list-replication-rule.component.css';
-import {BatchInfo, BathInfoChanges} from "../confirmation-dialog/confirmation-batch-message";
 import {Observable} from "rxjs/Observable";
+import {operateChanges, OperateInfo, OperationState} from "../operation/operate";
+import {OperationService} from "../operation/operation.service";
 
 @Component({
   selector: 'hbr-list-replication-rule',
@@ -80,7 +81,6 @@ export class ListReplicationRuleComponent implements OnInit, OnChanges {
   canDeleteRule: boolean;
 
   selectedRow: ReplicationRule;
-  batchDelectionInfos: BatchInfo[] = [];
 
   @ViewChild('toggleConfirmDialog')
   toggleConfirmDialog: ConfirmationDialogComponent;
@@ -95,6 +95,7 @@ export class ListReplicationRuleComponent implements OnInit, OnChanges {
     private replicationService: ReplicationService,
     private translateService: TranslateService,
     private errorHandler: ErrorHandler,
+    private operationService: OperationService,
     private ref: ChangeDetectorRef) {
     setInterval(() => ref.markForCheck(), 500);
   }
@@ -198,10 +199,6 @@ export class ListReplicationRuleComponent implements OnInit, OnChanges {
 
   deleteRule(rule: ReplicationRule) {
     if (rule) {
-      this.batchDelectionInfos = [];
-      let initBatchMessage = new BatchInfo();
-      initBatchMessage.name = rule.name;
-      this.batchDelectionInfos.push(initBatchMessage);
       let deletionMessage = new ConfirmationMessage(
           'REPLICATION.DELETION_TITLE',
           'REPLICATION.DELETION_SUMMARY',
@@ -216,15 +213,7 @@ export class ListReplicationRuleComponent implements OnInit, OnChanges {
     if (rule) {
       let promiseLists: any[] = [];
       Promise.all([this.jobList(rule.id)]).then(items => {
-        if (!this.canDeleteRule) {
-          let findedList = this.batchDelectionInfos.find(data => data.name === rule.name);
-          Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
-              this.translateService.get('REPLICATION.DELETION_SUMMARY_FAILURE')).subscribe(res => {
-            findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
-          });
-        } else {
-          promiseLists.push(this.delOperate(+rule.id, rule.name));
-        }
+        promiseLists.push(this.delOperate(rule));
 
         Promise.all(promiseLists).then(item => {
           this.selectedRow = null;
@@ -236,23 +225,38 @@ export class ListReplicationRuleComponent implements OnInit, OnChanges {
     }
   }
 
-    delOperate(ruleId: number, name: string) {
-      let findedList = this.batchDelectionInfos.find(data => data.name === name);
+    delOperate(rule: ReplicationRule) {
+      // init operation info
+      let operMessage = new OperateInfo();
+      operMessage.name = 'OPERATION.DELETE_REPLICATION';
+      operMessage.data.id = +rule.id;
+      operMessage.state = OperationState.progressing;
+      operMessage.data.name = rule.name;
+      this.operationService.publishInfo(operMessage);
+
+      if (!this.canDeleteRule) {
+        Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
+          this.translateService.get('REPLICATION.DELETION_SUMMARY_FAILURE')).subscribe(res => {
+          operateChanges(operMessage, OperationState.failure, res[1]);
+        });
+        return null;
+      }
+
       return toPromise<any>(this.replicationService
-          .deleteReplicationRule(ruleId))
+          .deleteReplicationRule(+rule.id))
           .then(() => {
             this.translateService.get('BATCH.DELETED_SUCCESS')
-                .subscribe(res => findedList = BathInfoChanges(findedList, res));
+                .subscribe(res => operateChanges(operMessage, OperationState.success));
           })
           .catch(error => {
             if (error && error.status === 412) {
               Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
                   this.translateService.get('REPLICATION.FAILED_TO_DELETE_POLICY_ENABLED')).subscribe(res => {
-                findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+                operateChanges(operMessage, OperationState.failure, res[1]);
               });
             } else {
               this.translateService.get('BATCH.DELETED_FAILURE').subscribe(res => {
-                findedList = BathInfoChanges(findedList, res, false, true);
+                operateChanges(operMessage, OperationState.failure, res);
               });
             }
           });

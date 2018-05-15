@@ -35,9 +35,10 @@ import { ConfirmationDialogService } from "../../shared/confirmation-dialog/conf
 import { ConfirmationMessage } from "../../shared/confirmation-dialog/confirmation-message";
 import { ConfirmationTargets, ConfirmationState, ConfirmationButtons } from "../../shared/shared.const";
 import {TranslateService} from "@ngx-translate/core";
-import {BatchInfo, BathInfoChanges} from "../../shared/confirmation-dialog/confirmation-batch-message";
-import {Observable} from "rxjs/Observable";
 import {AppConfigService} from "../../app-config.service";
+import {Observable} from "rxjs/Observable";
+import 'rxjs/add/observable/forkJoin';
+import {operateChanges, OperateInfo, OperationService, OperationState} from "harbor-ui";
 
 @Component({
     selector: "list-project",
@@ -50,7 +51,6 @@ export class ListProjectComponent implements OnDestroy {
     filteredType = 0; // All projects
     searchKeyword = "";
     selectedRow: Project[]  = [];
-    batchDelectionInfos: BatchInfo[] = [];
 
   @Output() addProject = new EventEmitter<void>();
 
@@ -75,6 +75,7 @@ export class ListProjectComponent implements OnDestroy {
         private statisticHandler: StatisticHandler,
         private translate: TranslateService,
         private deletionDialogService: ConfirmationDialogService,
+        private operationService: OperationService,
         private ref: ChangeDetectorRef) {
         this.subscription = deletionDialogService.confirmationConfirm$.subscribe(message => {
             if (message &&
@@ -212,15 +213,10 @@ export class ListProjectComponent implements OnDestroy {
 
     deleteProjects(p: Project[]) {
         let nameArr: string[] = [];
-        this.batchDelectionInfos = [];
         if (p && p.length) {
             p.forEach(data => {
                 nameArr.push(data.name);
-                let initBatchMessage = new BatchInfo ();
-                initBatchMessage.name = data.name;
-                this.batchDelectionInfos.push(initBatchMessage);
             });
-            this.deletionDialogService.addBatchInfoList(this.batchDelectionInfos);
             let deletionMessage = new ConfirmationMessage(
                 "PROJECT.DELETION_TITLE",
                 "PROJECT.DELETION_SUMMARY",
@@ -236,7 +232,7 @@ export class ListProjectComponent implements OnDestroy {
         let observableLists: any[] = [];
         if (projects && projects.length) {
             projects.forEach(data => {
-                observableLists.push(this.delOperate(data.project_id, data.name));
+                observableLists.push(this.delOperate(data));
             });
             Promise.all(observableLists).then(item => {
                 let st: State = this.getStateAfterDeletion();
@@ -251,24 +247,31 @@ export class ListProjectComponent implements OnDestroy {
         }
     }
 
-    delOperate(id: number, name: string) {
-        let findedList = this.batchDelectionInfos.find(list => list.name === name);
-        return this.proService.deleteProject(id)
+    delOperate(project: Project) {
+        // init operation info
+        let operMessage = new OperateInfo();
+        operMessage.name = 'OPERATION.DELETE_PROJECT';
+        operMessage.data.id = project.project_id;
+        operMessage.state = OperationState.progressing;
+        operMessage.data.name = project.name;
+        this.operationService.publishInfo(operMessage);
+
+        return this.proService.deleteProject(project.project_id)
             .then(
                 () => {
                     this.translate.get("BATCH.DELETED_SUCCESS").subscribe(res => {
-                        findedList = BathInfoChanges(findedList, res);
+                        operateChanges(operMessage, OperationState.success);
                     });
                 },
                 error => {
                     if (error && error.status === 412) {
                         Observable.forkJoin(this.translate.get("BATCH.DELETED_FAILURE"),
                             this.translate.get("PROJECT.FAILED_TO_DELETE_PROJECT")).subscribe(res => {
-                            findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+                            operateChanges(operMessage, OperationState.failure, res[1]);
                         });
                     } else {
                         this.translate.get("BATCH.DELETED_FAILURE").subscribe(res => {
-                            findedList = BathInfoChanges(findedList, res, false, true);
+                            operateChanges(operMessage, OperationState.failure, res);
                         });
                     }
                 });

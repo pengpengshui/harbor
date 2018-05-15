@@ -37,7 +37,6 @@ export class ConfirmationDialogComponent {
 
     @Output() confirmAction = new EventEmitter<ConfirmationAcknowledgement>();
     @Output() cancelAction = new EventEmitter<ConfirmationAcknowledgement>();
-    @Input() batchInfors: BatchInfo[]  = [];
     isDelete = false;
 
     constructor(
@@ -54,12 +53,6 @@ export class ConfirmationDialogComponent {
         this.opened = true;
     }
 
-    get batchOverStatus(): boolean {
-        if (this.batchInfors.length) {
-            return this.batchInfors.every(item => item.loading === false);
-        }
-        return false;
-    }
 
     colorChange(list: BatchInfo) {
         if (!list.loading && !list.errorState) {
@@ -76,7 +69,6 @@ export class ConfirmationDialogComponent {
     }
 
     close(): void {
-        this.batchInfors = [];
         this.opened = false;
     }
 
@@ -96,27 +88,6 @@ export class ConfirmationDialogComponent {
         ));
         this.isDelete = false;
         this.close();
-    }
-
-    operate(): void {
-        if (!this.message) {// Inproper condition
-            this.close();
-            return;
-        }
-
-        if (this.batchInfors.length) {
-            this.batchInfors.every(item => item.loading = true);
-            this.isDelete = true;
-        }
-
-        let data: any = this.message.data ? this.message.data : {};
-        let target = this.message.targetId ? this.message.targetId : ConfirmationTargets.EMPTY;
-        let message = new ConfirmationAcknowledgement(
-            ConfirmationState.CONFIRMED,
-            data,
-            target
-        );
-        this.confirmAction.emit(message);
     }
 
     confirm(): void {

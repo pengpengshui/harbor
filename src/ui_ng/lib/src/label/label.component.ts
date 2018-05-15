@@ -22,12 +22,13 @@ import {LabelDefaultService, LabelService} from "../service/label.service";
 import {toPromise} from "../utils";
 import {ErrorHandler} from "../error-handler/error-handler";
 import {CreateEditLabelComponent} from "../create-edit-label/create-edit-label.component";
-import {BatchInfo, BathInfoChanges} from "../confirmation-dialog/confirmation-batch-message";
 import {ConfirmationMessage} from "../confirmation-dialog/confirmation-message";
 import {ConfirmationButtons, ConfirmationState, ConfirmationTargets} from "../shared/shared.const";
 import {ConfirmationAcknowledgement} from "../confirmation-dialog/confirmation-state-message";
 import {TranslateService} from "@ngx-translate/core";
 import {ConfirmationDialogComponent} from "../confirmation-dialog/confirmation-dialog.component";
+import {operateChanges, OperateInfo, OperationState} from "../operation/operate";
+import {OperationService} from "../operation/operation.service";
 @Component({
     selector: 'hbr-label',
     template: LABEL_TEMPLATE,
@@ -41,7 +42,6 @@ export class LabelComponent implements OnInit {
     targetName: string;
 
     selectedRow: Label[] = [];
-    batchDelectionInfos: BatchInfo[] = [];
 
     @Input() scope: string;
     @Input() projectId = 0;
@@ -55,6 +55,7 @@ export class LabelComponent implements OnInit {
         private labelService: LabelService,
         private errorHandler: ErrorHandler,
         private translateService: TranslateService,
+        private operationService: OperationService,
         private ref: ChangeDetectorRef) {
     }
 
@@ -104,12 +105,8 @@ export class LabelComponent implements OnInit {
     deleteLabels(targets: Label[]): void {
         if (targets && targets.length) {
             let targetNames: string[] = [];
-            this.batchDelectionInfos = [];
             targets.forEach(target => {
                 targetNames.push(target.name);
-                let initBatchMessage = new BatchInfo ();
-                initBatchMessage.name = target.name;
-                this.batchDelectionInfos.push(initBatchMessage);
             });
             let deletionMessage = new ConfirmationMessage(
                 'LABEL.DELETION_TITLE_TARGET',
@@ -130,7 +127,7 @@ export class LabelComponent implements OnInit {
             if (targetLists && targetLists.length) {
                 let promiseLists: any[] = [];
                 targetLists.forEach(target => {
-                    promiseLists.push(this.delOperate(target.id, target.name));
+                    promiseLists.push(this.delOperate(target));
                 })
                 Promise.all(promiseLists).then((item) => {
                     this.selectedRow = [];
@@ -140,20 +137,27 @@ export class LabelComponent implements OnInit {
         }
     }
 
-    delOperate(id: number, name:  string) {
-        let findedList = this.batchDelectionInfos.find(data => data.name === name);
+    delOperate(target: Label) {
+        // init operation info
+        let operMessage = new OperateInfo();
+        operMessage.name = 'OPERATION.DELETE_LABEL';
+        operMessage.data.id = target.id;
+        operMessage.state = OperationState.progressing;
+        operMessage.data.name = target.name;
+        this.operationService.publishInfo(operMessage);
+
         return toPromise<number>(this.labelService
-            .deleteLabel(id))
+            .deleteLabel(target.id))
             .then(
                 response => {
                     this.translateService.get('BATCH.DELETED_SUCCESS')
                         .subscribe(res => {
-                            findedList = BathInfoChanges(findedList, res);
+                            operateChanges(operMessage, OperationState.success);
                         });
                 }).catch(
                 error => {
                         this.translateService.get('BATCH.DELETED_FAILURE').subscribe(res => {
-                            findedList = BathInfoChanges(findedList, res, false, true);
+                            operateChanges(operMessage, OperationState.failure, res);
                         });
                 });
     }

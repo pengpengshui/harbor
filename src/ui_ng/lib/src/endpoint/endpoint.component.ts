@@ -35,8 +35,9 @@ import { ENDPOINT_TEMPLATE } from './endpoint.component.html';
 import { toPromise, CustomComparator } from '../utils';
 
 import { State, Comparator } from 'clarity-angular';
-import {BatchInfo, BathInfoChanges} from "../confirmation-dialog/confirmation-batch-message";
 import {Observable} from "rxjs/Observable";
+import {operateChanges, OperateInfo, OperationState} from "../operation/operate";
+import {OperationService} from "../operation/operation.service";
 
 @Component({
     selector: 'hbr-endpoint',
@@ -65,7 +66,6 @@ export class EndpointComponent implements OnInit, OnDestroy {
 
     timerHandler: any;
     selectedRow: Endpoint[] = [];
-    batchDelectionInfos: BatchInfo[] = [];
 
     get initEndpoint(): Endpoint {
         return {
@@ -82,6 +82,7 @@ export class EndpointComponent implements OnInit, OnDestroy {
         private endpointService: EndpointService,
         private errorHandler: ErrorHandler,
         private translateService: TranslateService,
+        private operationService: OperationService,
         private ref: ChangeDetectorRef) {
         this.forceRefreshView(1000);
     }
@@ -150,12 +151,8 @@ export class EndpointComponent implements OnInit, OnDestroy {
     deleteTargets(targets: Endpoint[]) {
         if (targets && targets.length) {
             let targetNames: string[] = [];
-            this.batchDelectionInfos = [];
             targets.forEach(target => {
                 targetNames.push(target.name);
-                let initBatchMessage = new BatchInfo ();
-                initBatchMessage.name = target.name;
-                this.batchDelectionInfos.push(initBatchMessage);
             });
             let deletionMessage = new ConfirmationMessage(
                 'REPLICATION.DELETION_TITLE_TARGET',
@@ -175,7 +172,7 @@ export class EndpointComponent implements OnInit, OnDestroy {
             if (targetLists && targetLists.length) {
                 let promiseLists: any[] = [];
                 targetLists.forEach(target => {
-                    promiseLists.push(this.delOperate(target.id, target.name));
+                    promiseLists.push(this.delOperate(target));
                 })
                 Promise.all(promiseLists).then((item) => {
                     this.selectedRow = [];
@@ -186,26 +183,33 @@ export class EndpointComponent implements OnInit, OnDestroy {
         }
     }
 
-    delOperate(id: number | string, name:  string) {
-        let findedList = this.batchDelectionInfos.find(data => data.name === name);
+    delOperate(target: Endpoint) {
+        // init operation info
+        let operMessage = new OperateInfo();
+        operMessage.name = 'OPERATION.DELETE_REGISTRY';
+        operMessage.data.id = target.id;
+        operMessage.state = OperationState.progressing;
+        operMessage.data.name = target.name;
+        this.operationService.publishInfo(operMessage);
+
          return toPromise<number>(this.endpointService
-            .deleteEndpoint(id))
+            .deleteEndpoint(target.id))
             .then(
                 response => {
                     this.translateService.get('BATCH.DELETED_SUCCESS')
                         .subscribe(res => {
-                            findedList = BathInfoChanges(findedList, res);
+                            operateChanges(operMessage, OperationState.success);
                         });
                 }).catch(
             error => {
                 if (error && error.status === 412) {
                     Observable.forkJoin(this.translateService.get('BATCH.DELETED_FAILURE'),
                         this.translateService.get('DESTINATION.FAILED_TO_DELETE_TARGET_IN_USED')).subscribe(res => {
-                        findedList = BathInfoChanges(findedList, res[0], false, true, res[1]);
+                        operateChanges(operMessage, OperationState.failure, res[1]);
                     });
                 } else {
                     this.translateService.get('BATCH.DELETED_FAILURE').subscribe(res => {
-                        findedList = BathInfoChanges(findedList, res, false, true);
+                        operateChanges(operMessage, OperationState.failure, res);
                     });
                 }
             });

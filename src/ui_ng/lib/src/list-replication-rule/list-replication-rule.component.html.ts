@@ -35,6 +35,6 @@ export const LIST_REPLICATION_RULE_TEMPLATE: string = `
       <clr-dg-pagination #pagination [clrDgPageSize]="5"></clr-dg-pagination>
     </clr-dg-footer>
 </clr-datagrid>
-<confirmation-dialog #deletionConfirmDialog [batchInfors]="batchDelectionInfos" (confirmAction)="deletionConfirm($event)"></confirmation-dialog>
+<confirmation-dialog #deletionConfirmDialog (confirmAction)="deletionConfirm($event)"></confirmation-dialog>
 </div>
 `;

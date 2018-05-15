@@ -39,7 +39,7 @@ export const ENDPOINT_TEMPLATE = `
             </clr-datagrid>
         </div>
     </div>
-    <confirmation-dialog #confirmationDialog [batchInfors]="batchDelectionInfos" (confirmAction)="confirmDeletion($event)"></confirmation-dialog>
+    <confirmation-dialog #confirmationDialog (confirmAction)="confirmDeletion($event)"></confirmation-dialog>
     <hbr-create-edit-endpoint (reload)="reload($event)"></hbr-create-edit-endpoint>
 </div>
 `;

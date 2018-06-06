@@ -44,6 +44,7 @@ h4 {
 }
 
 .filterSelect {
+    position: relative;
     width: 315px;
 }
 
@@ -154,4 +155,12 @@ h4 {
     border-bottom: 1px solid blue;
     line-height: 14px;
     cursor: pointer;
+}
+
+.arrowSet{
+    display: inline-block;
+    position: absolute;
+    right: 50px;
+    top: 8px;
+    transform: rotate(180deg);
 }

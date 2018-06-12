@@ -69,14 +69,14 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
     "Sunday"
   ];
   filterSelect: string[] = ["repository", "tag", "label"];
-  ruleNameTooltip = "TOOLTIP.EMPTY";
+  ruleNameTooltip = "REPLICATION.NAME_TOOLTIP";
   headerTitle = "REPLICATION.ADD_POLICY";
 
   createEditRuleOpened: boolean;
   filterListData: { [key: string]: any }[] = [];
   inProgress = false;
   inNameChecking = false;
-  isRuleNameExist = false;
+  isRuleNameValid = true;
   nameChecker: Subject<string> = new Subject<string>();
   proNameChecker: Subject<string> = new Subject<string>();
   firstClick = 0;
@@ -118,7 +118,7 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
     private errorHandler: ErrorHandler,
     private proService: ProjectService,
     private translateService: TranslateService,
-    public ref: ChangeDetectorRef
+    private ref: ChangeDetectorRef
   ) {
     this.createForm();
   }
@@ -154,24 +154,31 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
     }
 
     this.nameChecker
-      .debounceTime(500)
+      .debounceTime(300)
       .distinctUntilChanged()
       .subscribe((ruleName: string) => {
-        this.isRuleNameExist = false;
-        this.inNameChecking = true;
-        toPromise<ReplicationRule[]>(
-          this.repService.getReplicationRules(0, ruleName)
-        )
-          .then(response => {
-            if (response.some(rule => rule.name === ruleName)) {
-              this.ruleNameTooltip = "TOOLTIP.RULE_USER_EXISTING";
-              this.isRuleNameExist = true;
-            }
-            this.inNameChecking = false;
-          })
-          .catch(() => {
-            this.inNameChecking = false;
-          });
+        let cont = this.ruleForm.controls["name"];
+        if (cont) {
+          this.isRuleNameValid = cont.valid;
+          if (this.isRuleNameValid) {
+            this.inNameChecking = true;
+            toPromise<ReplicationRule[]>(
+                this.repService.getReplicationRules(0, ruleName)
+            )
+                .then(response => {
+                  if (response.some(rule => rule.name === ruleName)) {
+                    this.ruleNameTooltip = "TOOLTIP.RULE_USER_EXISTING";
+                    this.isRuleNameValid = false;
+                  }
+                  this.inNameChecking = false;
+                })
+                .catch(() => {
+                  this.inNameChecking = false;
+                });
+          }else {
+            this.ruleNameTooltip = "REPLICATION.NAME_TOOLTIP";
+          }
+        }
       });
 
     this.proNameChecker
@@ -221,7 +228,7 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
 
   get isValid() {
     return !(
-      this.isRuleNameExist ||
+      !this.isRuleNameValid ||
       this.noSelectedProject ||
       this.noSelectedEndpoint ||
       this.inProgress
@@ -560,7 +567,7 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
     if (ruleName) {
       this.nameChecker.next(ruleName);
     } else {
-      this.ruleNameTooltip = "TOOLTIP.EMPTY";
+      this.ruleNameTooltip = "REPLICATION.NAME_TOOLTIP";
     }
   }
 
@@ -720,7 +727,7 @@ export class CreateEditRuleComponent implements OnInit, OnDestroy {
     this.firstClick = 0;
     this.noSelectedProject = true;
     this.noSelectedEndpoint = true;
-    this.isRuleNameExist = false;
+    this.isRuleNameValid = true;
 
     this.weeklySchedule = false;
     this.isScheduleOpt = false;

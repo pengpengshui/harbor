@@ -164,3 +164,9 @@ h4 {
     top: 8px;
     transform: rotate(180deg);
 }
+
+clr-modal {
+    ::ng-deep div.modal-dialog {
+        width: 25rem;
+    }
+}

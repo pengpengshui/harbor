@@ -2,6 +2,14 @@
   <h3 class="modal-title">{{headerTitle | translate}}</h3>
   <hbr-inline-alert class="modal-title" (confirmEvt)="confirmCancel($event)"></hbr-inline-alert>
   <div class="modal-body" style="max-height: 85vh;">
+   <clr-alert [hidden]='!deletedLabelCount' [clrAlertType]="'alert-warning'"  [clrAlertSizeSmall]="true" [clrAlertClosable]="false" [(clrAlertClosed)]="alertClosed">
+    <div class="alert-item">
+     <span class="alert-text">{{deletedLabelInfo}}</span>
+     <div class="alert-actions">
+      <a class="alert-action" (click)=" alertClosed = true">{{'REPLICATION.ACKNOWLEDGE' | translate}}</a>
+     </div>
+    </div>
+   </clr-alert>
     <form [formGroup]="ruleForm"  novalidate>
      <section class="form-block">
       <div class="form-group form-group-override">
@@ -52,7 +60,7 @@
            <span class="tooltip-content">{{'TOOLTIP.EMPTY' | translate}}</span>
           </label>
           <div class="arrowSet" [hidden]="!(filterListData[i]?.name=='label')" (click)="openLabelList(selectedValue.value, i, $event)"><clr-icon shape="angle"></clr-icon></div>
-          <clr-icon shape="warning-standard" class="is-solid is-warning" size="14" style="margin-left: -15px;" [hidden]="!haslabelInActived || !(filterListData[i]?.name=='label')"></clr-icon>
+          <clr-icon shape="warning-standard" class="is-solid is-warning" size="14" style="margin-left: -15px;" [hidden]="!deletedLabelCount || !(filterListData[i]?.name=='label')"></clr-icon>
           <clr-icon shape="times-circle" class="is-solid"  (click)="deleteFilter(i)"></clr-icon>
           <div *ngIf="!withAdmiral"><hbr-filter-label [projectId]="ruleForm.controls.projects.controls[0]?.value.project_id" [selectedLabelInfo]="filterLabelInfo" [isOpen]="filterListData[i].isOpen" (selectedLabels)="selectedLabelList($event, i)" (closePanelEvent)="filterListData[i].isOpen = false"></hbr-filter-label></div>
          </div>
@@ -133,6 +141,6 @@
   </div>
   <div class="modal-footer">
     <button type="button" id="ruleBtnCancel" class="btn btn-outline" [disabled]="this.inProgress" (click)="onCancel()">{{ 'BUTTON.CANCEL' | translate }}</button>
-    <button type="submit" id="ruleBtnOk" class="btn btn-primary"  (click)="onSubmit()" [disabled]="!ruleForm.valid || !isValid || !hasFormChange() || haslabelInActived">{{ 'BUTTON.SAVE' | translate }}</button>
+    <button type="submit" id="ruleBtnOk" class="btn btn-primary"  (click)="onSubmit()" [disabled]="!ruleForm.valid || !isValid || !hasFormChange()">{{ 'BUTTON.SAVE' | translate }}</button>
   </div>
 </clr-modal>

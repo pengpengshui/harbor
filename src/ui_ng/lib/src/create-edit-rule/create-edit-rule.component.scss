@@ -170,3 +170,16 @@ clr-modal {
         width: 25rem;
     }
 }
+
+.deletedDiv {
+    text-align: left;
+    line-height: 14px;
+    color: red;
+}
+.deletedDiv a{
+    margin-left: 10px;
+    text-decoration: underline;
+    cursor: pointer;
+    color: blue;
+}
+

@@ -21,8 +21,6 @@ export class FilterLabelComponent implements OnInit, OnChanges {
     openFilterLabelPanel: boolean;
     labelLists: LabelState[] = [];
     filterLabelName = '';
-    deletedLabels: Label[] =[];
-    deletedCount = 0;
     labelNameFilter: Subject<string> = new Subject<string> ();
     @Input() isOpen: boolean;
     @Input() projectId: number;
@@ -40,11 +38,6 @@ export class FilterLabelComponent implements OnInit, OnChanges {
                 if (this.labelLists.length) {
                     let lab = this.labelLists.find(data => data.label.id === info.id);
                     if (lab) {this.selectOper(lab); }
-                }
-
-                if (info.inactive === true) {
-                    this.deletedCount ++;
-                    this.labelLists.unshift({'iconsShow': true, 'label': info, 'show': true});
                 }
             });
         });
@@ -140,10 +133,6 @@ export class FilterLabelComponent implements OnInit, OnChanges {
     }
 
     unSelectOper(labelInfo: LabelState, isClick?: boolean): void {
-        if (labelInfo.label.inactive) {
-            this.labelLists.splice(this.labelLists.indexOf(labelInfo, 0), 1);
-            this.deletedCount --;
-        }
         this.sortOperation(this.labelLists, labelInfo);
 
         labelInfo.iconsShow = false;
